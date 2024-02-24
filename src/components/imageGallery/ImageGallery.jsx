@@ -5,7 +5,7 @@ import '../styles.css';
 const ImageGallery = ({ images, onImageClick }) => {
   return (
     <ul className="ImageGallery">
-      {images.map(image => (
+      {images?.map(image => (
         <ImageGalleryItem
           onImageClick={onImageClick}
           key={image.id}

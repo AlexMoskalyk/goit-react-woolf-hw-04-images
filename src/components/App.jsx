@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useEffect, useState } from 'react';
 import ImageGallery from './imageGallery/ImageGallery';
 import Modal from './modal/Modal';
 import { fetchPicture } from './api/Api';
@@ -6,90 +6,81 @@ import Searchbar from 'components/searchbar/Searchbar';
 import Loader from './loader/Loader';
 import Button from './button/Button';
 
-export class App extends Component {
-  state = {
-    page: 1,
-    images: [],
-    filter: '',
-    showModal: false,
-    image: {
-      url: '',
-      alt: '',
-    },
-    loader: false,
-    showBtn: false,
-  };
+export const App = () => {
+  const [page, setPage] = useState(1);
 
-  componentDidUpdate(_, prevState) {
-    if (
-      prevState.page !== this.state.page ||
-      prevState.filter !== this.state.filter
-    ) {
-      this.getPictures(this.state.filter, this.state.page);
-    }
-  }
+  const [images, setImages] = useState([]);
 
-  onImageClick = obj => {
-    this.setState({
-      image: {
-        url: obj.largeImageURL,
-        alt: obj.tags,
-      },
+  const [filter, setFilter] = useState('');
+
+  const [showModal, setShowModal] = useState(false);
+
+  const [image, setImage] = useState({
+    url: '',
+    alt: '',
+  });
+
+  const [loader, setLoader] = useState(false);
+
+  const [showBtn, setShowBtn] = useState(false);
+
+  const onImageClick = obj => {
+    setImage({
+      url: obj.largeImageURL,
+      alt: obj.tags,
     });
 
-    this.toggleModal();
+    toggleModal();
   };
 
-  toggleModal = () => {
-    this.setState(prevState => ({ showModal: !prevState.showModal }));
+  const toggleModal = () => {
+    setShowModal(prev => !prev);
   };
 
-  handleFilterSubmit = filter => {
-    this.setState({ filter: filter, page: 1, images: [] });
+  const handleFilterSubmit = filter => {
+    setFilter(filter);
+    setPage(1);
+    setImages([]);
   };
 
-  handleOnButtonClick = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
+  const handleOnButtonClick = () => {
+    setPage(prev => prev + 1);
   };
 
-  getPictures = async (value, page) => {
-    this.setState({ loader: true });
-    try {
-      const data = await fetchPicture(value, page);
-      if (data.hits.length === 0)
-        return alert('Opps! There are no pictures available');
+  useEffect(() => {
+    if (filter === '') return;
+    const getPictures = async () => {
+      setLoader(prev => !prev);
+      try {
+        const data = await fetchPicture(filter, page);
+        if (data.hits.length === 0)
+          return alert('Opps! There are no pictures available');
 
-      this.setState(prevState => ({
-        images: [...prevState.images, ...data.hits],
-        showBtn: this.state.page < Math.ceil(data.totalHits / 12),
-      }));
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      this.setState({ loader: false });
-    }
-  };
+        setImages(prev => [...prev, ...data.hits]);
 
-  render() {
-    return (
-      <>
-        <div>
-          <Searchbar handleFilter={this.handleFilterSubmit} />
-          <ImageGallery
-            images={this.state.images}
-            onImageClick={this.onImageClick}
-          />
-        </div>
-        {this.state.showModal && (
-          <Modal toggleModal={this.toggleModal}>
-            <img src={this.state.image.url} alt={this.state.image.alt} />
-          </Modal>
-        )}
-        {this.state.showBtn && <Button onClick={this.handleOnButtonClick} />}
-        {this.state.loader && <Loader />}
-      </>
-    );
-  }
-}
+        setShowBtn(page < Math.ceil(data.totalHits / 12));
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        setLoader(prev => !prev);
+      }
+    };
+    getPictures();
+  }, [page, filter]);
+
+  return (
+    <>
+      <div>
+        <Searchbar handleFilter={handleFilterSubmit} />
+        <ImageGallery images={images} onImageClick={onImageClick} />
+      </div>
+      {showModal && (
+        <Modal toggleModal={toggleModal}>
+          <img src={image.url} alt={image.alt} />
+        </Modal>
+      )}
+      {showBtn && <Button onClick={handleOnButtonClick} />}
+      {loader && <Loader />}
+    </>
+  );
+};
